@@ -15,6 +15,7 @@ main(_) ->
     ok = application:start(sockjs),
     ok = application:start(ranch),
     ok = application:start(crypto),
+    ok = application:start(cowlib),
     ok = application:start(cowboy),
 
     SockjsState = sockjs_handler:init_state(
@@ -26,7 +27,7 @@ main(_) ->
     Dispatch = cowboy_router:compile(Routes),
 
     io:format(" [*] Running at http://localhost:~p~n", [Port]),
-    cowboy:start_http(cowboy_echo_http_listener, 100, 
+    cowboy:start_http(cowboy_echo_http_listener, 100,
                       [{port, Port}],
                       [{env, [{dispatch, Dispatch}]}]),
     receive
