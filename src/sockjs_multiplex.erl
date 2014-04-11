@@ -71,6 +71,7 @@ split(Char, Str, Limit) ->
     Acc = split(Char, Str, Limit, []),
     lists:reverse(Acc).
 split(_Char, _Str, 0, Acc) -> Acc;
+split(_Char, Str, 1, Acc) -> [Str | Acc];
 split(Char, Str, Limit, Acc) ->
     {L, R} = case string:chr(Str, Char) of
                  0 -> {Str, ""};
