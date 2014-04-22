@@ -67,11 +67,14 @@ emit(What, Channel = #service{callback = Callback,
 
 %% --------------------------------------------------------------------------
 
-split(Char, Str, Limit) ->
+split(Char, Str, Limit) when Limit > 0 ->
     Acc = split(Char, Str, Limit, []),
-    lists:reverse(Acc).
-split(_Char, _Str, 0, Acc) -> Acc;
-split(_Char, Str, 1, Acc) -> [Str | Acc];
+    lists:reverse(Acc);
+split(_Char, Str, 0) ->
+    [Str].
+
+split(_Char, Str, 1, Acc) ->
+    [Str | Acc];
 split(Char, Str, Limit, Acc) ->
     {L, R} = case string:chr(Str, Char) of
                  0 -> {Str, ""};
