@@ -1,10 +1,8 @@
 -module(sockjs).
 
+-include("sockjs_internal.hrl").
+
 -export([send/2, close/1, close/3, info/1]).
-
--export_type([conn/0]).
-
--type(conn() :: {sockjs_session, any()}).
 
 %% Send data over a connection.
 -spec send(iodata(), conn()) -> ok.

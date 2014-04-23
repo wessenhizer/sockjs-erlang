@@ -1,10 +1,9 @@
 -compile({parse_transform,sockjs_pmod_pt}).
 -module(sockjs_multiplex_channel).
 
--export([send/2, close/1, close/3, info/1]).
+-include("sockjs_internal.hrl").
 
--type channel() :: {?MODULE, sockjs:conn(), topic()}.
--type topic()   :: string().
+-export([send/2, close/1, close/3, info/1]).
 
 -spec send(iodata(), channel()) -> ok.
 send(Data, {?MODULE, Conn, Topic}) ->
