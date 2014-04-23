@@ -1,17 +1,24 @@
 -compile({parse_transform,sockjs_pmod_pt}).
--module(sockjs_multiplex_channel, [Conn, Topic]).
+-module(sockjs_multiplex_channel).
 
--export([send/1, close/0, close/2, info/0]).
+-export([send/2, close/1, close/3, info/1]).
 
-send(Data) ->
+-type channel() :: {?MODULE, sockjs:conn(), topic()}.
+-type topic()   :: string().
+
+-spec send(iodata(), channel()) -> ok.
+send(Data, {?MODULE, Conn, Topic}) ->
     Conn:send(iolist_to_binary(["msg", ",", Topic, ",", Data])).
 
-close() ->
-    close(1000, "Normal closure").
+-spec close(channel()) -> ok.
+close(Channel) ->
+    close(1000, "Normal closure", Channel).
 
-close(_Code, _Reason) ->
+-spec close(non_neg_integer(), string(), channel()) -> ok.
+close(_Code, _Reason, {?MODULE, Conn, Topic}) ->
     Conn:send(iolist_to_binary(["uns", ",", Topic])).
 
-info() ->
+-spec info(channel()) -> [{atom(), any()}].
+info({?MODULE, Conn, Topic}) ->
     Conn:info() ++ [{topic, Topic}].
 

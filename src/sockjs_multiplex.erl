@@ -39,8 +39,7 @@ action(Conn, {Type, Topic, Payload}, Service, Channels) ->
     case {Type, orddict:is_key(Topic, Channels)} of
         {"sub", false} ->
             Channel = Service#service{
-                         vconn = sockjs_multiplex_channel:new(
-                                   Conn, Topic)
+                         vconn = {sockjs_multiplex_channel, Conn, Topic}
                         },
             orddict:store(Topic, emit(init, Channel), Channels);
         {"uns", true} ->
