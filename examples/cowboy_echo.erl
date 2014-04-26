@@ -50,7 +50,7 @@ terminate(_Reason, _Req, _State) ->
 
 %% --------------------------------------------------------------------------
 
-service_echo(_Conn, init, state)        -> {ok, state};
-service_echo(Conn, {recv, Data}, state) -> Conn:send(Data);
+service_echo(_Conn, init, state)          -> {ok, state};
+service_echo(Conn, {recv, Data}, state)   -> sockjs:send(Data, Conn);
 service_echo(_Conn, {info, _Info}, state) -> {ok, state};
-service_echo(_Conn, closed, state)      -> {ok, state}.
+service_echo(_Conn, closed, state)        -> {ok, state}.

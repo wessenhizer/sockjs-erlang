@@ -62,26 +62,26 @@ terminate(_Reason, _Req, _State) ->
 %% --------------------------------------------------------------------------
 
 service_ann(Conn, init, State) ->
-    Conn:send("Ann says hi!"),
+    sockjs:send("Ann says hi!", Conn),
     {ok, State};
 service_ann(Conn, {recv, Data}, State) ->
-    Conn:send(["Ann nods: ", Data]),
+    sockjs:send(["Ann nods: ", Data], Conn),
     {ok, State};
 service_ann(_Conn, closed, State) ->
     {ok, State}.
 
 service_bob(Conn, init, State) ->
-    Conn:send("Bob doesn't agree."),
+    sockjs:send("Bob doesn't agree.", Conn),
     {ok, State};
 service_bob(Conn, {recv, Data}, State) ->
-    Conn:send(["Bob says no to: ", Data]),
+    sockjs:send(["Bob says no to: ", Data], Conn),
     {ok, State};
 service_bob(_Conn, closed, State) ->
     {ok, State}.
 
 service_carl(Conn, init, State) ->
-    Conn:send("Carl says goodbye!"),
-    Conn:close(),
+    sockjs:send("Carl says goodbye!", Conn),
+    sockjs:close(Conn),
     {ok, State};
 service_carl(_Conn, _, State) ->
     {ok, State}.
