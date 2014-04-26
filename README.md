@@ -49,7 +49,7 @@ main(_) ->
     end.
 
 service_echo(_Conn, init, state)          -> {ok, state};
-service_echo(Conn, {recv, Data}, state)   -> Conn:send(Data);
+service_echo(Conn, {recv, Data}, state)   -> Conn:send(Data); % or: sockjs:send(Data, Conn)
 service_echo(_Conn, {info, _Info}, state) -> {ok, state};
 service_echo(_Conn, closed, state)        -> {ok, state}.
 ```
@@ -82,7 +82,7 @@ SockJS-erlang API
 Except for the web framework-specific API's, SockJS-erlang is rather
 simple. It has just a couple of methods:
 
- * **sockjs_handler:init_state(prefix, callback, state, options) -> service()**
+ * **sockjs_handler:init_state(Prefix, Callback, State, Options) -> service()**
 
     Initializes the state of a SockJS service (ie: a thing you can
     access from the browser, it has an url and a code on the server
@@ -122,18 +122,22 @@ simple. It has just a couple of methods:
     For more explanation, please do take a look at
     [SockJS-node readme](https://github.com/sockjs/sockjs-node/blob/master/README.md).
 
- * **Connection:send(payload) -> ok**
+ * **Connection:send(Payload) -> ok**
+ * **sockjs:send(Payload, Connection) -> ok**
 
      Send data over an active SockJS connection. Payload should be of
      iodata() type. Messages sent after connection gets closed will be
      lost.
 
- * **Connection:close(code, reason) -> ok**
+ * **Connection:close(Code, Reason) -> ok**
+ * **sockjs:close(Code, Reason, Connection) -> ok**
+ * **sockjs:close(Connection) -> ok**
 
      Close an active SockJS connection with code and reason. If code
      and reason are skipped, the defaults are used.
 
  * **Connection:info() -> proplist()**
+ * **sockjs:info(Connection) -> proplist()**
 
      Sometimes you may want to know more about the underlying
      connection. This method returns a proplist with few attributes
