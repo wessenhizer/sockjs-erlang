@@ -1,24 +1,40 @@
 -module(sockjs).
 
+-export([send/2, close/1, close/3, info/1]).
+-export([to_normal/1, to_channel/2]).
+
 -include("sockjs_internal.hrl").
 
--export([send/2, close/1, close/3, info/1]).
-
-%% Send data over a connection.
--spec send(iodata(), conn()) -> ok.
+%% Send data over a connection/channel.
+-spec send(iodata(), conn() | channel()) -> ok.
 send(Data, Conn = {sockjs_session, _}) ->
-    sockjs_session:send(Data, Conn).
+    sockjs_session:send(Data, Conn);
+send(Data, Channel = {sockjs_multiplex_channel, _, _}) ->
+	sockjs_multiplex_channel:send(Data, Channel).
 
-%% Initiate a close of a connection.
--spec close(conn()) -> ok.
+%% Initiate a close of a connection/channel.
+-spec close(conn() | channel()) -> ok.
 close(Conn) ->
     close(1000, "Normal closure", Conn).
 
--spec close(non_neg_integer(), string(), conn()) -> ok.
+-spec close(non_neg_integer(), string(), conn() | channel()) -> ok.
 close(Code, Reason, Conn = {sockjs_session, _}) ->
-    sockjs_session:close(Code, Reason, Conn).
+    sockjs_session:close(Code, Reason, Conn);
+close(Code, Reason, Channel = {sockjs_multiplex_channel, _, _}) ->
+    sockjs_multiplex_channel:close(Code, Reason, Channel).
 
--spec info(conn()) -> [{atom(), any()}].
+-spec info(conn() | channel()) -> [{atom(), any()}].
 info(Conn = {sockjs_session, _}) ->
-    sockjs_session:info(Conn).
+    sockjs_session:info(Conn);
+info(Channel = {sockjs_multiplex_channel, _, _}) ->
+    sockjs_multiplex_channel:info(Channel).
 
+%% Get the backend connection of a channel.
+-spec to_normal(channel()) -> conn().
+to_normal({sockjs_multiplex_channel, Conn, _}) ->
+    Conn.
+
+%% Create a channel from a connection.
+-spec to_channel(conn(), topic()) -> channel().
+to_channel(Conn = {sockjs_session, _}, Topic) ->
+    {sockjs_multiplex_channel, Conn, Topic}.
