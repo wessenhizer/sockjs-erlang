@@ -1,8 +1,8 @@
 -module(sockjs_multiplex_channel).
 
--include("sockjs_internal.hrl").
-
 -export([send/2, close/1, close/3, info/1]).
+
+-include("sockjs_internal.hrl").
 
 -spec send(iodata(), channel()) -> ok.
 send(Data, {?MODULE, Conn = {sockjs_session, _}, Topic}) ->
