@@ -1,4 +1,3 @@
--compile({parse_transform,sockjs_pmod_pt}).
 -module(sockjs_multiplex_channel).
 
 -include("sockjs_internal.hrl").
