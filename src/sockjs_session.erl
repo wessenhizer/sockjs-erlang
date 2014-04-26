@@ -11,7 +11,9 @@
          handle_cast/2]).
 
 -include("sockjs_internal.hrl").
+
 -type(handle() :: {?MODULE, {pid(), info()}}).
+-type(conn()   :: {?MODULE, any()}).
 
 -record(session, {id                           :: session(),
                   outbound_queue = queue:new() :: queue(),

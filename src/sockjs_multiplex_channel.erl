@@ -2,7 +2,8 @@
 
 -export([send/2, close/1, close/3, info/1]).
 
--include("sockjs_internal.hrl").
+-type(channel() :: {?MODULE, sockjs_session:conn(), topic()}).
+-type(topic()    :: string()).
 
 -spec send(iodata(), channel()) -> ok.
 send(Data, {?MODULE, Conn = {sockjs_session, _}, Topic}) ->

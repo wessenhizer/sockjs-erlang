@@ -30,7 +30,3 @@
                    {heartbeat, nil} ).
 
 -type(info()    :: [{atom(), any()}]).
-
--type(conn()    :: {sockjs_session, any()}).
--type(channel() :: {sockjs_multiplex_channel, conn(), topic()}).
--type(topic()   :: string()).
