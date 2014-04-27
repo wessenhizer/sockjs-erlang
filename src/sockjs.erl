@@ -1,7 +1,7 @@
 -module(sockjs).
 
 -export([send/2, close/1, close/3, info/1]).
--export([to_normal/1, to_channel/2]).
+-export([to_session/1, to_channel/2]).
 
 %% Send data over a connection/channel.
 -spec send(iodata(), sockjs_session:conn() | sockjs_multiplex_channel:channel()) -> ok.
@@ -28,8 +28,8 @@ info(Channel = {sockjs_multiplex_channel, _, _}) ->
     sockjs_multiplex_channel:info(Channel).
 
 %% Get the backend connection of a channel.
--spec to_normal(sockjs_multiplex_channel:channel()) -> sockjs_session:conn().
-to_normal({sockjs_multiplex_channel, Conn, _}) ->
+-spec to_session(sockjs_multiplex_channel:channel()) -> sockjs_session:conn().
+to_session({sockjs_multiplex_channel, Conn, _}) ->
     Conn.
 
 %% Create a channel from a connection.
