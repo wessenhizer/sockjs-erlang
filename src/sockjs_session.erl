@@ -15,6 +15,9 @@
 -type(handle() :: {?MODULE, {pid(), info()}}).
 -type(conn()   :: {?MODULE, any()}).
 
+-export_type([conn/0]).
+
+
 -record(session, {id                           :: session(),
                   outbound_queue = queue:new() :: queue(),
                   response_pid                 :: pid(),

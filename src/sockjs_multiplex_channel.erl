@@ -5,6 +5,9 @@
 -type(channel() :: {?MODULE, sockjs_session:conn(), topic()}).
 -type(topic()    :: string()).
 
+-export_type([channel/0, topic/0]).
+
+
 -spec send(iodata(), channel()) -> ok.
 send(Data, {?MODULE, Conn = {sockjs_session, _}, Topic}) ->
 	sockjs_session:send(iolist_to_binary(["msg", ",", Topic, ",", Data]), Conn).
