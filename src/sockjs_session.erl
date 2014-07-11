@@ -27,6 +27,7 @@
                   heartbeat_delay = 25000      :: non_neg_integer(),
                   ready_state = connecting     :: connecting | open | closed,
                   close_msg                    :: {non_neg_integer(), string()},
+                  authen_callback,
                   callback,
                   state,
                   handle                       :: handle()
@@ -159,29 +160,64 @@ unmark_waiting(RPid, State = #session{response_pid    = Pid,
   when Pid =/= undefined andalso Pid =/= RPid ->
     State.
 
+get_authen_callback_result(AuthenCallback, Handle, What, UserState) ->
+    case erlang:is_function(AuthenCallback) of
+        true ->
+            AuthenCallback(Handle, What, UserState);
+        false ->
+            authen_callback_not_found
+    end.
+
 -spec emit(emittable(), #session{}) -> #session{}.
-emit(What, State = #session{callback = Callback,
-                            state    = UserState,
-                            handle   = Handle}) ->
+emit(What, State = #session{authen_callback = AuthenCallback,
+                            callback        = Callback,
+                            state           = UserState,
+                            handle          = Handle}) ->
     R = case Callback of
             _ when is_function(Callback) ->
-                Callback(Handle, What, UserState);
+                case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
+                    authen_callback_not_found ->
+                        State1 = State#session{authen_callback = undefined},
+                        Callback(Handle, What, UserState);
+                    success ->
+                        State1 = State#session{authen_callback = undefined},
+                        ok;
+                    Else ->
+                        State1 = State,
+                        Else
+                end;
             _ when is_atom(Callback) ->
                 case What of
-                    init         -> Callback:sockjs_init(Handle, UserState);
-                    {recv, Data} -> Callback:sockjs_handle(Handle, Data, UserState);
-                    closed       -> Callback:sockjs_terminate(Handle, UserState)
+                    init ->
+                        State1 = State,
+                        Callback:sockjs_init(Handle, UserState);
+                    {recv, Data} ->
+                        case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
+                            authen_callback_not_found ->
+                                State1 = State,
+                                Callback:sockjs_handle(Handle, Data, UserState);
+                            success ->
+                                State1 = State#session{authen_callback = undefined},
+                                ok;
+                            Else ->
+                                State1 = State,
+                                Else
+                        end;
+                    closed ->
+                        State1 = State,
+                        Callback:sockjs_terminate(Handle, UserState)
                 end
         end,
     case R of
-        {ok, UserState1} -> State#session{state = UserState1};
-        ok               -> State
+        {ok, UserState1} -> State1#session{state = UserState1};
+        ok               -> State1
     end.
 
 %% --------------------------------------------------------------------------
 
 -spec init({session_or_undefined(), service(), info()}) -> {ok, #session{}}.
-init({SessionId, #service{callback         = Callback,
+init({SessionId, #service{authen_callback  = AuthenCallback,
+                          callback         = Callback,
                           state            = UserState,
                           disconnect_delay = DisconnectDelay,
                           heartbeat_delay  = HeartbeatDelay}, Info}) ->
@@ -192,6 +228,7 @@ init({SessionId, #service{callback         = Callback,
     process_flag(trap_exit, true),
     TRef = erlang:send_after(DisconnectDelay, self(), session_timeout),
     {ok, #session{id               = SessionId,
+                  authen_callback  = AuthenCallback,
                   callback         = Callback,
                   state            = UserState,
                   response_pid     = undefined,

@@ -1,6 +1,6 @@
 -module(sockjs_handler).
 
--export([init_state/4]).
+-export([init_state/4, init_state/5]).
 -export([is_valid_ws/2, get_action/2]).
 -export([dispatch_req/2, handle_req/2]).
 -export([extract_info/1]).
@@ -13,7 +13,12 @@
 
 -spec init_state(binary(), callback(), any(), list(tuple())) -> service().
 init_state(Prefix, Callback, State, Options) ->
+    init_state(Prefix, undefined, Callback, State, Options).
+
+-spec init_state(binary(), callback(), callback(), any(), list(tuple())) -> service().
+init_state(Prefix, AuthenCallback, Callback, State, Options) ->
     #service{prefix = binary_to_list(Prefix),
+             authen_callback = AuthenCallback,
              callback = Callback,
              state = State,
              sockjs_url =

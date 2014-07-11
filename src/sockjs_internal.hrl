@@ -7,6 +7,7 @@
 -type(logger()       :: fun((any(), req(), websocket|http) -> req())).
 
 -record(service, {prefix           :: nonempty_string(),
+                  authen_callback  :: callback(),
                   callback         :: callback(),
                   state            :: any(),
                   sockjs_url       :: nonempty_string(),
