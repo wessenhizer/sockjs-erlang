@@ -40,7 +40,7 @@ init({_Any, http}, Req, []) ->
     {ok, Req, []}.
 
 handle(Req, State) ->
-    {ok, Data} = file:read_file("./examples/echo.html"),
+    {ok, Data} = file:read_file("./examples/echo_authen_callback.html"),
     {ok, Req1} = cowboy_req:reply(200, [{<<"Content-Type">>, "text/html"}],
                                        Data, Req),
     {ok, Req1, State}.
