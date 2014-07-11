@@ -61,13 +61,15 @@ terminate(_Reason, _Req, _State) ->
 
 %% --------------------------------------------------------------------------
 
-authen(_Conn, init, State) ->
-    {ok, State};
-authen(Conn, {recv, Data}, State) ->
+authen(Conn, init, {Services, Channels, Extra}) ->
+    {ok, TRef} = timer:apply_after(5000, sockjs, close, [Conn]),
+    {ok, {Services, Channels, [TRef | Extra]}};
+authen(Conn, {recv, Data}, {Services, Channels, [TRef | Extra]} = State) ->
     case Data of
         <<"auth">> ->
-            Conn:send(<<"Authenticate successfully!">>),
-            success;
+            sockjs:send(<<"Authenticate successfully!">>, Conn),
+            timer:cancel(TRef),
+            {success, {Services, Channels, Extra}};
         _Else ->
             {ok, State}
     end;
