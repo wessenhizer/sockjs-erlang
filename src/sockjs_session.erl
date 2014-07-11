@@ -179,9 +179,9 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                     authen_callback_not_found ->
                         State1 = State#session{authen_callback = undefined},
                         Callback(Handle, What, UserState);
-                    success ->
+                    {success, UserState1} ->
                         State1 = State#session{authen_callback = undefined},
-                        ok;
+                        {ok, UserState1};
                     Else ->
                         State1 = State,
                         Else
@@ -190,26 +190,38 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                 case What of
                     init ->
                         State1 = State,
-                        Callback:sockjs_init(Handle, UserState);
+                        {ok, UserState1} = Callback:sockjs_init(Handle, UserState),
+                        case get_authen_callback_result(AuthenCallback, Handle, What, UserState1) of
+                            authen_callback_not_found ->
+                                {ok, UserState1};
+                            Else ->
+                                Else
+                        end;
                     {recv, Data} ->
                         case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
                             authen_callback_not_found ->
                                 State1 = State,
                                 Callback:sockjs_handle(Handle, Data, UserState);
-                            success ->
+                            {success, UserState1} ->
                                 State1 = State#session{authen_callback = undefined},
-                                ok;
+                                {ok, UserState1};
                             Else ->
                                 State1 = State,
                                 Else
                         end;
                     closed ->
                         State1 = State,
-                        Callback:sockjs_terminate(Handle, UserState)
+                        case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
+                            {Status, UserState1} when Status =:= success orelse Status =:= ok ->
+                                ok;
+                            _Else ->
+                                UserState1 = UserState
+                        end,
+                        Callback:sockjs_terminate(Handle, UserState1)
                 end
         end,
     case R of
-        {ok, UserState1} -> State1#session{state = UserState1};
+        {ok, UserState2} -> State1#session{state = UserState2};
         ok               -> State1
     end.
 

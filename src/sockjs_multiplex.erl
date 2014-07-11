@@ -12,27 +12,26 @@
 init_state(Services) ->
     L = [{Topic, #service{callback = Callback, state = State}} ||
             {Topic, Callback, State} <- Services],
-    {orddict:from_list(L), orddict:new()}.
+    {orddict:from_list(L), orddict:new(), []}.
 
 
-
-sockjs_init(_Conn, {_Services, _Channels} = S) ->
+sockjs_init(_Conn, {_Services, _Channels, _Extra} = S) ->
     {ok, S}.
 
-sockjs_handle(Conn, Data, {Services, Channels}) ->
+sockjs_handle(Conn, Data, {Services, Channels, Extra}) ->
     [Type, Topic, Payload] = split($,, binary_to_list(Data), 3),
     case orddict:find(Topic, Services) of
         {ok, Service} ->
             Channels1 = action(Conn, {Type, Topic, Payload}, Service, Channels),
-            {ok, {Services, Channels1}};
+            {ok, {Services, Channels1, Extra}};
         _Else ->
-            {ok, {Services, Channels}}
+            {ok, {Services, Channels, Extra}}
     end.
 
-sockjs_terminate(_Conn, {Services, Channels}) ->
+sockjs_terminate(_Conn, {Services, Channels, Extra}) ->
     _ = [ {emit(closed, Channel)} ||
             {_Topic, Channel} <- orddict:to_list(Channels) ],
-    {ok, {Services, orddict:new()}}.
+    {ok, {Services, orddict:new(), Extra}}.
 
 
 action(Conn, {Type, Topic, Payload}, Service, Channels) ->
