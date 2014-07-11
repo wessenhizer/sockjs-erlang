@@ -22,7 +22,7 @@ sockjs_handle(Conn, Data, {Services, Channels, Extra}) ->
     [Type, Topic, Payload] = split($,, binary_to_list(Data), 3),
     case orddict:find(Topic, Services) of
         {ok, Service} ->
-            Channels1 = action(Conn, {Type, Topic, Payload}, Service, Channels),
+            Channels1 = action(Conn, {Type, Topic, Payload}, Service, Channels, Extra),
             {ok, {Services, Channels1, Extra}};
         _Else ->
             {ok, {Services, Channels, Extra}}
@@ -34,12 +34,13 @@ sockjs_terminate(_Conn, {Services, Channels, Extra}) ->
     {ok, {Services, orddict:new(), Extra}}.
 
 
-action(Conn, {Type, Topic, Payload}, Service, Channels) ->
+action(Conn, {Type, Topic, Payload}, Service, Channels, Extra) ->
     case {Type, orddict:is_key(Topic, Channels)} of
         {"sub", false} ->
             Channel = Service#service{
-                         vconn = {sockjs_multiplex_channel, Conn, Topic}
-                        },
+                            state = Extra,
+                            vconn = {sockjs_multiplex_channel, Conn, Topic}
+                            },
             orddict:store(Topic, emit(init, Channel), Channels);
         {"uns", true} ->
             Channel = orddict:fetch(Topic, Channels),
