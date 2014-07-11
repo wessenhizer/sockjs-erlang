@@ -58,14 +58,19 @@ authen(Conn, {recv, Data}, [TRef | State] = State1) ->
         <<"auth">> ->
             sockjs:send(<<"Authenticate successfully!">>, Conn),
             timer:cancel(TRef),
-            {success, State};
+            {success, [{user_id, element(3, erlang:now())} | State]};
         _Else ->
             {ok, State1}
     end;
 authen(_Conn, closed, State) ->
     {ok, State}.
 
-service_echo(_Conn, init, state)          -> {ok, state};
-service_echo(Conn, {recv, Data}, state)   -> sockjs:send(Data, Conn);
-service_echo(_Conn, {info, _Info}, state) -> {ok, state};
-service_echo(_Conn, closed, state)        -> {ok, state}.
+service_echo(_Conn, init, State) ->
+    {ok, State};
+service_echo(Conn, {recv, Data}, State) ->
+    {user_id, UserId} = lists:keyfind(user_id, 1, State),
+    sockjs:send([Data, " from ", erlang:integer_to_binary(UserId)], Conn);
+service_echo(_Conn, {info, _Info}, State) ->
+    {ok, State};
+service_echo(_Conn, closed, State) ->
+    {ok, State}.

@@ -69,7 +69,7 @@ authen(Conn, {recv, Data}, {Services, Channels, [TRef | Extra]} = State) ->
         <<"auth">> ->
             sockjs:send(<<"Authenticate successfully!">>, Conn),
             timer:cancel(TRef),
-            {success, {Services, Channels, Extra}};
+            {success, {Services, Channels, [{user_id, element(3, erlang:now())} | Extra]}};
         _Else ->
             {ok, State}
     end;
@@ -80,7 +80,8 @@ service_ann(Conn, init, State) ->
     sockjs:send("Ann says hi!", Conn),
     {ok, State};
 service_ann(Conn, {recv, Data}, State) ->
-    sockjs:send(["Ann nods: ", Data], Conn),
+    {user_id, UserId} = lists:keyfind(user_id, 1, State),
+    sockjs:send(["Ann nods: ", Data, " from ", erlang:integer_to_binary(UserId)], Conn),
     {ok, State};
 service_ann(_Conn, closed, State) ->
     {ok, State}.
@@ -89,7 +90,9 @@ service_bob(Conn, init, State) ->
     sockjs:send("Bob doesn't agree.", Conn),
     {ok, State};
 service_bob(Conn, {recv, Data}, State) ->
-    sockjs:send(["Bob says no to: ", Data], Conn),
+    {user_id, UserId} = lists:keyfind(user_id, 1, State),
+    sockjs:send(["Bob says no to: ", Data, " from ", erlang:integer_to_binary(UserId)],
+                Conn),
     {ok, State};
 service_bob(_Conn, closed, State) ->
     {ok, State}.
