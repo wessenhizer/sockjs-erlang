@@ -160,6 +160,8 @@ unmark_waiting(RPid, State = #session{response_pid    = Pid,
   when Pid =/= undefined andalso Pid =/= RPid ->
     State.
 
+%% Get result of authentication callback if it exists.
+%% Otherwise return ``authen_callback_not_found``.
 get_authen_callback_result(AuthenCallback, Handle, What, UserState) ->
     case erlang:is_function(AuthenCallback) of
         true ->
@@ -175,11 +177,14 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                             handle          = Handle}) ->
     R = case Callback of
             _ when is_function(Callback) ->
+                % try to evaluate state using authentication callback
                 case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
                     authen_callback_not_found ->
                         State1 = State#session{authen_callback = undefined},
+                        % do normal action with main service
                         Callback(Handle, What, UserState);
                     {success, UserState1} ->
+                        % authenticate successfully
                         State1 = State#session{authen_callback = undefined},
                         {ok, UserState1};
                     Else ->
@@ -190,7 +195,9 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                 case What of
                     init ->
                         State1 = State,
+                        % init first
                         {ok, UserState1} = Callback:sockjs_init(Handle, UserState),
+                        % then try to evaluate state using authentication callback
                         case get_authen_callback_result(AuthenCallback, Handle, What, UserState1) of
                             authen_callback_not_found ->
                                 {ok, UserState1};
@@ -198,11 +205,14 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                                 Else
                         end;
                     {recv, Data} ->
+                        % try to evaluate state using authentication callback
                         case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
                             authen_callback_not_found ->
                                 State1 = State,
+                                % do normal action with channel service
                                 Callback:sockjs_handle(Handle, Data, UserState);
                             {success, UserState1} ->
+                                % authenticate successfully
                                 State1 = State#session{authen_callback = undefined},
                                 {ok, UserState1};
                             Else ->
@@ -211,12 +221,14 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                         end;
                     closed ->
                         State1 = State,
+                        % try to evaluate state using authentication callback first
                         case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
                             {Status, UserState1} when Status =:= success orelse Status =:= ok ->
                                 ok;
                             _Else ->
                                 UserState1 = UserState
                         end,
+                        % terminate channel
                         Callback:sockjs_terminate(Handle, UserState1)
                 end
         end,

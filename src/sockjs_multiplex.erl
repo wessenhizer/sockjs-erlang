@@ -12,6 +12,7 @@
 init_state(Services) ->
     L = [{Topic, #service{callback = Callback, state = State}} ||
             {Topic, Callback, State} <- Services],
+    % Services, Channels, Extra
     {orddict:from_list(L), orddict:new(), []}.
 
 
