@@ -180,7 +180,7 @@ emit(What, State = #session{authen_callback = AuthenCallback,
                 % try to evaluate state using authentication callback
                 case get_authen_callback_result(AuthenCallback, Handle, What, UserState) of
                     authen_callback_not_found ->
-                        State1 = State#session{authen_callback = undefined},
+                        State1 = State,
                         % do normal action with main service
                         Callback(Handle, What, UserState);
                     {success, UserState1} ->
