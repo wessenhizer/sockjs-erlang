@@ -20,10 +20,11 @@ main(_) ->
     MultiplexState = sockjs_multiplex:init_state(
                        [{"ann",  fun service_ann/3,  []},
                         {"bob",  fun service_bob/3,  []},
-                        {"carl", fun service_carl/3, []}]),
+                        {"carl", fun service_carl/3, []}],
+                       {fun authen/3, [{apply_close, true}]}),
 
     SockjsState = sockjs_handler:init_state(
-                    <<"/multiplex">>, fun authen/3, sockjs_multiplex, MultiplexState, []),
+                    <<"/multiplex">>, sockjs_multiplex, MultiplexState, []),
 
     VhostRoutes = [{<<"/multiplex/[...]">>, sockjs_cowboy_handler, SockjsState},
                    {'_', ?MODULE, []}],
@@ -61,15 +62,15 @@ terminate(_Reason, _Req, _State) ->
 
 %% --------------------------------------------------------------------------
 
-authen(Conn, init, {Services, Channels, Extra}) ->
+authen(Conn, init, {Services, Channels, AuthenCallbackRec, Extra}) ->
     {ok, TRef} = timer:apply_after(5000, sockjs, close, [Conn]),
-    {ok, {Services, Channels, [TRef | Extra]}};
-authen(Conn, {recv, Data}, {Services, Channels, [TRef | Extra]} = State) ->
+    {ok, {Services, Channels, AuthenCallbackRec, [TRef | Extra]}};
+authen(Conn, {recv, Data}, {Services, Channels, AuthenCallbackRec, [TRef | Extra]} = State) ->
     case Data of
         <<"auth">> ->
             sockjs:send(<<"Authenticate successfully!">>, Conn),
             timer:cancel(TRef),
-            {success, {Services, Channels, [{user_id, element(3, erlang:now())} | Extra]}};
+            {success, {Services, Channels, AuthenCallbackRec, [{user_id, element(3, erlang:now())} | Extra]}};
         _Else ->
             {ok, State}
     end;
