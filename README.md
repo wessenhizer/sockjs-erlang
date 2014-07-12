@@ -205,9 +205,6 @@ What's news in this fork?
      use your services. It's quite simple, see [example](https://github.com/trubavuong/sockjs-erlang/blob/master/examples/multiplex/cowboy_multiplex_authen_callback.erl).
      Valid authentication callback options:
 
-       * `{apply_close, boolean()}` - apply authentication callback
-         when close an active SockJS connection (not channel) even if
-         authenticated successfully.
        * `{state, list()}` - initial state of authentication callback
 
      If you do not use multiplexing, you can also implement this

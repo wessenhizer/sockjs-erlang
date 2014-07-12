@@ -21,7 +21,7 @@ main(_) ->
                        [{"ann",  fun service_ann/3,  []},
                         {"bob",  fun service_bob/3,  []},
                         {"carl", fun service_carl/3, []}],
-                       {fun authen/3, [{apply_close, true}]}),
+                       {fun authen/3, [{state, []}]}),
 
     SockjsState = sockjs_handler:init_state(
                     <<"/multiplex">>, sockjs_multiplex, MultiplexState, []),

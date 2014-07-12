@@ -6,30 +6,13 @@
 -export([sockjs_init/2, sockjs_handle/3, sockjs_terminate/2]).
 
 -record(service, {callback, state, vconn}).
--record(authen_callback, {callback, success = false, apply_close = false}).
+-record(authen_callback, {callback, success = false}).
 
 %% --------------------------------------------------------------------------
 
 init_state(Services, {AuthenCallback, Options}) ->
     L = [{Topic, #service{callback = Callback, state = State}} ||
             {Topic, Callback, State} <- Services],
-
-    ApplyClose = case erlang:is_function(AuthenCallback) of
-                     true ->
-                         case lists:keyfind(apply_close, 1, Options) of
-                             {apply_close, ApplyCloseValue} ->
-                                 case erlang:is_boolean(ApplyCloseValue) of
-                                     true ->
-                                         ApplyCloseValue;
-                                     false ->
-                                         false
-                                 end;
-                             false ->
-                                 false
-                         end;
-                     false ->
-                         false
-                 end,
 
     Extra = case lists:keyfind(state, 1, Options) of
                 {state, ExtraValue} ->
@@ -45,7 +28,7 @@ init_state(Services, {AuthenCallback, Options}) ->
 
     % Services, Channels, AuthenCallback, Extra
     {orddict:from_list(L), orddict:new(),
-     #authen_callback{callback = AuthenCallback, success = false, apply_close = ApplyClose},
+     #authen_callback{callback = AuthenCallback, success = false},
      Extra}.
 
 init_state(Services) ->
@@ -99,25 +82,17 @@ sockjs_handle(Conn, Data, {Services, Channels,
             end
     end.
 
-sockjs_terminate(Conn, {Services, Channels,
-                        #authen_callback{success = Success,
-                                         apply_close = ApplyClose} = AuthenCallbackRec,
-                        Extra}) ->
-    case Success of
-        true ->
-            case ApplyClose of
-                true ->
-                    get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra);
-                false ->
-                    ok
-            end;
-        false ->
-            get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra)
+sockjs_terminate(Conn, {Services, Channels, AuthenCallbackRec, Extra}) ->
+    case get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra) of
+        {ok, Extra1} ->
+            ok;
+        _Else ->
+            Extra1 = Extra
     end,
 
     _ = [ {emit(closed, Channel)} ||
             {_Topic, Channel} <- orddict:to_list(Channels) ],
-    {ok, {Services, orddict:new(), AuthenCallbackRec, Extra}}.
+    {ok, {Services, orddict:new(), AuthenCallbackRec, Extra1}}.
 
 
 action(Conn, {Type, Topic, Payload}, Service, Channels, Extra) ->
