@@ -159,6 +159,72 @@ to explain how to use them, please take a look at the examples.
  * **sockjs_handler:handle_ws(service(), req()) -> req()**
 
 
+What's news in this fork?
+-------------------------
+
+### API for multiplexing
+
+ * **sockjs:send(Payload, Channel) -> ok**
+
+     Send data over a channel. Payload should be of iodata() type. Messages
+     sent after connection gets closed will be lost.
+
+ * **sockjs:close(Code, Reason, Channel) -> ok**
+ * **sockjs:close(Channel) -> ok**
+
+     Close a channel with code and reason. If code and reason are skipped,
+     the defaults are used. But actually, code and reason are not sent to
+     client.
+
+ * **sockjs:info(Channel) -> proplist()**
+
+     Sometimes you may want to know more about the underlying
+     connection. This method returns a proplist with few attributes
+     extracted from the first HTTP/websocket request that was coming
+     to this connection. You should see:
+
+       * peername - ip address and port of the remote host
+       * sockname - ip address and port of the local endpoint
+       * path - the path used by the request that started the connection
+       * headers - a set of headers extracted from the request that
+         may be handy (don't expect to retrieve Cookie header).
+
+ * **sockjs:to_session(Channel) -> conn()**
+
+     Convert a channel to connection.
+
+ * **sockjs:to_channel(Conn, Topic) -> channel()**
+
+     Convert a connection to channel with specific topic (channel name).
+
+ * **sockjs_multiplex:init_state(Services, {AuthenCallback, Options})**
+
+     Sometimes you don't want client access directly your channel
+     services and you want to do something with client first. If you
+     use authentication callback, you can decide when allow client to
+     use your services. It's quite simple, see [example](https://github.com/trubavuong/sockjs-erlang/blob/master/examples/multiplex/cowboy_multiplex_authen_callback.erl).
+     Valid authentication callback options:
+
+       * `{apply_close, boolean()}` - apply authentication callback
+         when close an active SockJS connection (not channel) even if
+         authenticated successfully.
+       * `{state, list()}` - initial state of authentication callback
+
+     If you do not use multiplexing, you can also implement this
+     mechanism, see [example](https://github.com/trubavuong/sockjs-erlang/blob/master/examples/cowboy_echo_authen_callback.erl).
+
+ * **sockjs_multiplex:init_state(Services)**
+
+     Initialize state without authentication callback.
+
+
+### Other libraries
+
+ * Use [jiffy](https://github.com/davisp/jiffy) to encode/decode JSON.
+   I use it for better performance, [see benchmark from kivikakk.ee](https://kivikakk.ee/2013/05/20/erlang_is_slow.html).
+ * Use the latest version of [Cowboy](https://github.com/extend/cowboy) (0.10.0).
+
+
 Stability
 ---------
 
