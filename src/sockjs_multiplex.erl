@@ -54,21 +54,22 @@ init_state(Services) ->
 
 %% Get result of authentication callback if it exists.
 %% Otherwise return ``authen_callback_not_found``.
+%% Authentication callback should return {ok, State} or {success, State}.
 get_authen_callback_result(#authen_callback{callback = AuthenCallback},
-                           Handle, What, UserState) ->
+                           Handle, What, Extra) ->
     case erlang:is_function(AuthenCallback) of
         true ->
-            AuthenCallback(Handle, What, UserState);
+            AuthenCallback(Handle, What, Extra);
         false ->
             authen_callback_not_found
     end.
 
-sockjs_init(Conn, {_Services, _Channels, AuthenCallbackRec, _Extra} = S) ->
-    case get_authen_callback_result(AuthenCallbackRec, Conn, init, S) of
+sockjs_init(Conn, {Services, Channels, AuthenCallbackRec, Extra} = S) ->
+    case get_authen_callback_result(AuthenCallbackRec, Conn, init, Extra) of
         authen_callback_not_found ->
             {ok, S};
-        Else ->
-            Else
+        {ok, Extra1} ->
+            {ok, {Services, Channels, AuthenCallbackRec, Extra1}}
     end.
 
 sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra}) ->
@@ -86,25 +87,24 @@ sockjs_handle(Conn, Data, {Services, Channels,
                            Extra} = S) ->
     case Success of
         true ->
-            sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra});
+            sockjs_handle_via_channel(Conn, Data, S);
         false ->
-            AuthenCallbackResult = get_authen_callback_result(AuthenCallbackRec, Conn, {recv, Data}, S),
-            case AuthenCallbackResult of
+            case get_authen_callback_result(AuthenCallbackRec, Conn, {recv, Data}, Extra) of
                 authen_callback_not_found ->
                     sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra});
-                {success, {Services1, Channels1, AuthenCallbackRec, Extra1}} ->
-                    {ok, {Services1, Channels1, AuthenCallbackRec#authen_callback{success = true}, Extra1}};
-                Else ->
-                    Else
+                {success, Extra1} ->
+                    {ok, {Services, Channels, AuthenCallbackRec#authen_callback{success = true}, Extra1}};
+                {ok, Extra1} ->
+                    {ok, {Services, Channels, AuthenCallbackRec, Extra1}}
             end
     end.
 
 sockjs_terminate(Conn, {Services, Channels,
                         #authen_callback{apply_close = ApplyClose} = AuthenCallbackRec,
-                        Extra} = S) ->
+                        Extra}) ->
     case ApplyClose of
         true ->
-            get_authen_callback_result(AuthenCallbackRec, Conn, closed, S);
+            get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra);
         _Else ->
             ok
     end,
