@@ -62,7 +62,8 @@ authen(Conn, {recv, Data}, [TRef | State] = State1) ->
         _Else ->
             {ok, State1}
     end;
-authen(_Conn, closed, State) ->
+authen(_Conn, closed, [TRef | State]) ->
+    timer:cancel(TRef),
     {ok, State}.
 
 service_echo(Conn, init, State) ->

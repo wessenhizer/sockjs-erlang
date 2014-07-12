@@ -74,8 +74,9 @@ authen(Conn, {recv, Data}, [TRef | Extra] = State) ->
         _Else ->
             {ok, State}
     end;
-authen(_Conn, closed, State) ->
-    {ok, State}.
+authen(_Conn, closed, [TRef | Extra]) ->
+    timer:cancel(TRef),
+    {ok, Extra}.
 
 service_ann(Conn, init, State) ->
     sockjs:send("Ann says hi!", Conn),
