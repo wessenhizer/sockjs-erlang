@@ -2,37 +2,89 @@
 
 -behaviour(sockjs_service).
 
--export([init_state/1]).
+-export([init_state/1, init_state/2]).
 -export([sockjs_init/2, sockjs_handle/3, sockjs_terminate/2]).
 
 -record(service, {callback, state, vconn}).
+-record(authen_callback, {callback, success = false, apply_close = false}).
 
 %% --------------------------------------------------------------------------
 
-init_state(Services) ->
+get_authen_callback_result(#authen_callback{callback = AuthenCallback},
+                           Handle, What, UserState) ->
+    case erlang:is_function(AuthenCallback) of
+        true ->
+            AuthenCallback(Handle, What, UserState);
+        false ->
+            authen_callback_not_found
+    end.
+
+init_state(Services, {AuthenCallback, Options}) ->
     L = [{Topic, #service{callback = Callback, state = State}} ||
             {Topic, Callback, State} <- Services],
-    % Services, Channels, Extra
-    {orddict:from_list(L), orddict:new(), []}.
+    case lists:keyfind(apply_close, 1, Options) of
+        {apply_close, ApplyClose} ->
+            ok;
+        false ->
+            ApplyClose = false
+    end,
+    % Services, Channels, AuthenCallback, Extra
+    {orddict:from_list(L), orddict:new(),
+     #authen_callback{callback = AuthenCallback, apply_close = ApplyClose},
+     []}.
+
+init_state(Services) ->
+    init_state(Services, {undefined, []}).
 
 
-sockjs_init(_Conn, {_Services, _Channels, _Extra} = S) ->
-    {ok, S}.
+sockjs_init(Conn, {_Services, _Channels, AuthenCallbackRec, _Extra} = S) ->
+    case get_authen_callback_result(AuthenCallbackRec, Conn, init, S) of
+        authen_callback_not_found ->
+            {ok, S};
+        Else ->
+            Else
+    end.
 
-sockjs_handle(Conn, Data, {Services, Channels, Extra}) ->
+sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra}) ->
     [Type, Topic, Payload] = split($,, binary_to_list(Data), 3),
     case orddict:find(Topic, Services) of
         {ok, Service} ->
             Channels1 = action(Conn, {Type, Topic, Payload}, Service, Channels, Extra),
-            {ok, {Services, Channels1, Extra}};
+            {ok, {Services, Channels1, AuthenCallbackRec, Extra}};
         _Else ->
-            {ok, {Services, Channels, Extra}}
+            {ok, {Services, Channels, AuthenCallbackRec, Extra}}
     end.
 
-sockjs_terminate(_Conn, {Services, Channels, Extra}) ->
+sockjs_handle(Conn, Data, {Services, Channels,
+                           #authen_callback{success = Success} = AuthenCallbackRec,
+                           Extra} = S) ->
+    case Success of
+        true ->
+            sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra});
+        false ->
+            AuthenCallbackResult = get_authen_callback_result(AuthenCallbackRec, Conn, {recv, Data}, S),
+            case AuthenCallbackResult of
+                authen_callback_not_found ->
+                    sockjs_handle_via_channel(Conn, Data, {Services, Channels, AuthenCallbackRec, Extra});
+                {success, {Services1, Channels1, AuthenCallbackRec, Extra1}} ->
+                    {ok, {Services1, Channels1, AuthenCallbackRec#authen_callback{success = true}, Extra1}};
+                Else ->
+                    Else
+            end
+    end.
+
+sockjs_terminate(Conn, {Services, Channels,
+                        #authen_callback{apply_close = ApplyClose} = AuthenCallbackRec,
+                        Extra} = S) ->
+    case ApplyClose of
+        true ->
+            get_authen_callback_result(AuthenCallbackRec, Conn, closed, S);
+        _Else ->
+            ok
+    end,
     _ = [ {emit(closed, Channel)} ||
             {_Topic, Channel} <- orddict:to_list(Channels) ],
-    {ok, {Services, orddict:new(), Extra}}.
+    {ok, {Services, orddict:new(), AuthenCallbackRec, Extra}}.
 
 
 action(Conn, {Type, Topic, Payload}, Service, Channels, Extra) ->
