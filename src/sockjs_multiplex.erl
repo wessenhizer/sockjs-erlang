@@ -100,14 +100,21 @@ sockjs_handle(Conn, Data, {Services, Channels,
     end.
 
 sockjs_terminate(Conn, {Services, Channels,
-                        #authen_callback{apply_close = ApplyClose} = AuthenCallbackRec,
+                        #authen_callback{success = Success,
+                                         apply_close = ApplyClose} = AuthenCallbackRec,
                         Extra}) ->
-    case ApplyClose of
+    case Success of
         true ->
-            get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra);
-        _Else ->
-            ok
+            case ApplyClose of
+                true ->
+                    get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra);
+                false ->
+                    ok
+            end;
+        false ->
+            get_authen_callback_result(AuthenCallbackRec, Conn, closed, Extra)
     end,
+
     _ = [ {emit(closed, Channel)} ||
             {_Topic, Channel} <- orddict:to_list(Channels) ],
     {ok, {Services, orddict:new(), AuthenCallbackRec, Extra}}.
