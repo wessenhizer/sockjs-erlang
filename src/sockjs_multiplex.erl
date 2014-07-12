@@ -13,21 +13,40 @@
 init_state(Services, {AuthenCallback, Options}) ->
     L = [{Topic, #service{callback = Callback, state = State}} ||
             {Topic, Callback, State} <- Services],
+
     ApplyClose = case erlang:is_function(AuthenCallback) of
                      true ->
                          case lists:keyfind(apply_close, 1, Options) of
-                             {apply_close, Value} ->
-                                 Value;
+                             {apply_close, ApplyCloseValue} ->
+                                 case erlang:is_boolean(ApplyCloseValue) of
+                                     true ->
+                                         ApplyCloseValue;
+                                     false ->
+                                         false
+                                 end;
                              false ->
                                  false
                          end;
                      false ->
                          false
                  end,
+
+    Extra = case lists:keyfind(state, 1, Options) of
+                {state, ExtraValue} ->
+                    case erlang:is_list(ExtraValue) of
+                        true ->
+                            ExtraValue;
+                        false ->
+                            []
+                    end;
+                false ->
+                    []
+            end,
+
     % Services, Channels, AuthenCallback, Extra
     {orddict:from_list(L), orddict:new(),
      #authen_callback{callback = AuthenCallback, success = false, apply_close = ApplyClose},
-     []}.
+     Extra}.
 
 init_state(Services) ->
     init_state(Services, {undefined, []}).
