@@ -10,6 +10,31 @@
 
 %% --------------------------------------------------------------------------
 
+init_state(Services, {AuthenCallback, Options}) ->
+    L = [{Topic, #service{callback = Callback, state = State}} ||
+            {Topic, Callback, State} <- Services],
+    ApplyClose = case erlang:is_function(AuthenCallback) of
+                     true ->
+                         case lists:keyfind(apply_close, 1, Options) of
+                             {apply_close, Value} ->
+                                 Value;
+                             false ->
+                                 false
+                         end;
+                     false ->
+                         false
+                 end,
+    % Services, Channels, AuthenCallback, Extra
+    {orddict:from_list(L), orddict:new(),
+     #authen_callback{callback = AuthenCallback, success = false, apply_close = ApplyClose},
+     []}.
+
+init_state(Services) ->
+    init_state(Services, {undefined, []}).
+
+
+%% Get result of authentication callback if it exists.
+%% Otherwise return ``authen_callback_not_found``.
 get_authen_callback_result(#authen_callback{callback = AuthenCallback},
                            Handle, What, UserState) ->
     case erlang:is_function(AuthenCallback) of
@@ -18,24 +43,6 @@ get_authen_callback_result(#authen_callback{callback = AuthenCallback},
         false ->
             authen_callback_not_found
     end.
-
-init_state(Services, {AuthenCallback, Options}) ->
-    L = [{Topic, #service{callback = Callback, state = State}} ||
-            {Topic, Callback, State} <- Services],
-    case lists:keyfind(apply_close, 1, Options) of
-        {apply_close, ApplyClose} ->
-            ok;
-        false ->
-            ApplyClose = false
-    end,
-    % Services, Channels, AuthenCallback, Extra
-    {orddict:from_list(L), orddict:new(),
-     #authen_callback{callback = AuthenCallback, apply_close = ApplyClose},
-     []}.
-
-init_state(Services) ->
-    init_state(Services, {undefined, []}).
-
 
 sockjs_init(Conn, {_Services, _Channels, AuthenCallbackRec, _Extra} = S) ->
     case get_authen_callback_result(AuthenCallbackRec, Conn, init, S) of
