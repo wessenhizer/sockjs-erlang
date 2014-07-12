@@ -19,7 +19,7 @@ main(_) ->
     ok = application:start(cowboy),
 
     SockjsState = sockjs_handler:init_state(
-                    <<"/echo">>, fun authen/3, fun service_echo/3, state, []),
+                    <<"/echo">>, fun service_echo/3, [], []),
 
     VhostRoutes = [{<<"/echo/[...]">>, sockjs_cowboy_handler, SockjsState},
                    {'_', ?MODULE, []}],
@@ -65,12 +65,21 @@ authen(Conn, {recv, Data}, [TRef | State] = State1) ->
 authen(_Conn, closed, State) ->
     {ok, State}.
 
-service_echo(_Conn, init, State) ->
-    {ok, State};
+service_echo(Conn, init, State) ->
+    authen(Conn, init, State);
 service_echo(Conn, {recv, Data}, State) ->
-    {user_id, UserId} = lists:keyfind(user_id, 1, State),
-    sockjs:send([Data, " from ", erlang:integer_to_binary(UserId)], Conn);
+    case lists:keyfind(user_id, 1, State) of
+        {user_id, UserId} ->
+            sockjs:send([Data, " from ", erlang:integer_to_binary(UserId)], Conn);
+        false ->
+            case authen(Conn, {recv, Data}, State) of
+                {success, State1} ->
+                    {ok, State1};
+                Else ->
+                    Else
+            end
+    end;
 service_echo(_Conn, {info, _Info}, State) ->
     {ok, State};
-service_echo(_Conn, closed, State) ->
-    {ok, State}.
+service_echo(Conn, closed, State) ->
+    authen(Conn, closed, State).
