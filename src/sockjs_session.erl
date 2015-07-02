@@ -19,7 +19,7 @@
 
 
 -record(session, {id                           :: session(),
-                  outbound_queue = queue:new() :: queue(),
+                  outbound_queue = queue:new() :: queue:queue(),
                   response_pid                 :: pid(),
                   disconnect_tref              :: reference(),
                   disconnect_delay = 5000      :: non_neg_integer(),
