@@ -32,6 +32,7 @@ main(_) ->
     ok = application:start(sockjs),
     ok = application:start(ranch),
     ok = application:start(crypto),
+    ok = application:start(cowlib),
     ok = application:start(cowboy),
 
     SockjsState = sockjs_handler:init_state(
@@ -219,7 +220,7 @@ What's news in this fork?
 
  * Use [jiffy](https://github.com/davisp/jiffy) to encode/decode JSON.
    I use it for better performance, [see benchmark from kivikakk.ee](https://kivikakk.ee/2013/05/20/erlang_is_slow.html).
- * Use the latest version of [Cowboy](https://github.com/extend/cowboy) (0.10.0).
+ * Use the latest stable version of [Cowboy](https://github.com/ninenines/cowboy) (1.0.1).
 
 
 Stability
