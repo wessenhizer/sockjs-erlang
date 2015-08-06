@@ -29,7 +29,9 @@ init_state(Prefix, Callback, State, Options) ->
              response_limit =
                  proplists:get_value(response_limit, Options, 128*1024),
              logger =
-                 proplists:get_value(logger, Options, fun default_logger/3)
+                 proplists:get_value(logger, Options, fun default_logger/3),
+             subproto_pref =
+                 proplists:get_value(subproto_pref, Options)
             }.
 
 %% --------------------------------------------------------------------------
