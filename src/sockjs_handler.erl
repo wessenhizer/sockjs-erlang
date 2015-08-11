@@ -7,7 +7,7 @@
 
 -include("sockjs_internal.hrl").
 
--define(SOCKJS_URL, "http://cdn.sockjs.org/sockjs-0.2.js").
+-define(SOCKJS_URL, "https://d1fxtkz8shb9d2.cloudfront.net/sockjs-0.3.min.js").
 
 %% --------------------------------------------------------------------------
 
@@ -29,7 +29,9 @@ init_state(Prefix, Callback, State, Options) ->
              response_limit =
                  proplists:get_value(response_limit, Options, 128*1024),
              logger =
-                 proplists:get_value(logger, Options, fun default_logger/3)
+                 proplists:get_value(logger, Options, fun default_logger/3),
+             subproto_pref =
+                 proplists:get_value(subproto_pref, Options)
             }.
 
 %% --------------------------------------------------------------------------
@@ -51,7 +53,7 @@ valid_ws_request(_Service, Req) ->
     {R1 and R2, Req2, {R1, R2}}.
 
 valid_ws_upgrade(Req) ->
-    case sockjs_http:header('Upgrade', Req) of
+    case sockjs_http:header('upgrade', Req) of
         {undefined, Req2} ->
             {false, Req2};
         {V, Req2} ->
@@ -64,7 +66,7 @@ valid_ws_upgrade(Req) ->
     end.
 
 valid_ws_connection(Req) ->
-    case sockjs_http:header('Connection', Req) of
+    case sockjs_http:header('connection', Req) of
         {undefined, Req2} ->
             {false, Req2};
         {V, Req2} ->
@@ -220,8 +222,8 @@ extract_info(Req) ->
                                               {V, R1}         -> {[{H, V} | Acc], R1}
                                           end
                                   end, {[], Req2},
-                                  ['Referer', 'X-Client-Ip', 'X-Forwarded-For',
-                                   'X-Cluster-Client-Ip', 'Via', 'X-Real-Ip']),
+                                  ['referer', 'x-client-ip', 'x-forwarded-for',
+                                   'x-cluster-client-ip', 'via', 'x-real-ip']),
     {[{peername, Peer},
       {sockname, Sock},
       {path, Path},

@@ -15,7 +15,8 @@
                   disconnect_delay :: non_neg_integer(),
                   heartbeat_delay  :: non_neg_integer(),
                   response_limit   :: non_neg_integer(),
-                  logger           :: logger()
+                  logger           :: logger(),
+                  subproto_pref    :: [binary()]
                   }).
 
 -type(service() :: #service{}).

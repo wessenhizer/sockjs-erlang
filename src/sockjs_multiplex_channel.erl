@@ -1,16 +1,25 @@
--module(sockjs_multiplex_channel, [Conn, Topic]).
+-module(sockjs_multiplex_channel).
 
--export([send/1, close/0, close/2, info/0]).
+-export([send/2, close/1, close/3, info/1]).
 
-send(Data) ->
-    Conn:send(iolist_to_binary(["msg", ",", Topic, ",", Data])).
+-type(channel() :: {?MODULE, sockjs_session:conn(), topic()}).
+-type(topic()    :: string()).
 
-close() ->
-    close(1000, "Normal closure").
+-export_type([channel/0, topic/0]).
 
-close(_Code, _Reason) ->
-    Conn:send(iolist_to_binary(["uns", ",", Topic])).
 
-info() ->
-    Conn:info() ++ [{topic, Topic}].
+-spec send(iodata(), channel()) -> ok.
+send(Data, {?MODULE, Conn = {sockjs_session, _}, Topic}) ->
+	sockjs_session:send(iolist_to_binary(["msg", ",", Topic, ",", Data]), Conn).
 
+-spec close(channel()) -> ok.
+close(Channel) ->
+    close(1000, "Normal closure", Channel).
+
+-spec close(non_neg_integer(), string(), channel()) -> ok.
+close(_Code, _Reason, {?MODULE, Conn, Topic}) ->
+	sockjs_session:send(iolist_to_binary(["uns", ",", Topic]), Conn).
+
+-spec info(channel()) -> [{atom(), any()}].
+info({?MODULE, Conn = {sockjs_session, _}, Topic}) ->
+    sockjs_session:info(Conn) ++ [{topic, Topic}].

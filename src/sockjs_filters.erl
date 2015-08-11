@@ -1,9 +1,9 @@
 -module(sockjs_filters).
 
--include("sockjs_internal.hrl").
-
 -export([cache_for/2, h_sid/2, h_no_cache/2, xhr_cors/2,
          xhr_options_post/2, xhr_options_get/2]).
+
+-include("sockjs_internal.hrl").
 
 -define(YEAR, 365 * 24 * 60 * 60).
 
@@ -38,14 +38,14 @@ h_no_cache(Req, Headers) ->
 
 -spec xhr_cors(req(), headers()) -> {headers(), req()}.
 xhr_cors(Req, Headers) ->
-    {OriginH, Req1} = sockjs_http:header('Origin', Req),
+    {OriginH, Req1} = sockjs_http:header('origin', Req),
      Origin = case OriginH of
                   "null"    -> "*";
                   undefined -> "*";
                   O         -> O
               end,
     {HeadersH, Req2} = sockjs_http:header(
-                             'Access-Control-Request-Headers', Req1),
+                             'access-control-request-headers', Req1),
     AllowHeaders = case HeadersH of
                        undefined -> [];
                        V         -> [{"Access-Control-Allow-Headers", V}]

@@ -36,6 +36,11 @@
 <head><body lang="en">
     <h1>SockJS Multiplex example</h1>
 
+    <div id="main" class="box">
+      <div></div>
+      <form><input autocomplete="off"></input></form>
+    </div>
+
     <div id="first" class="box">
       <div></div>
       <form><input autocomplete="off" value="Type here..."></input></form>
@@ -68,7 +73,22 @@
             };
 
             ws.onopen    = function()  {print('[*] open', ws.protocol);};
-            ws.onmessage = function(e) {print('[.] message', e.data);};
+            ws.onmessage = function(e) {
+              if (e.data === 'Authenticate successfully!') {
+                var multiplexer = new WebSocketMultiplex(sockjs);
+                var ann  = multiplexer.channel('ann');
+                var bob  = multiplexer.channel('bob');
+                var carl = multiplexer.channel('carl');
+
+                pipe(ann,  '#first');
+                pipe(bob,  '#second');
+                pipe(carl, '#third');
+              }
+              else {
+                print('[.] message', e.data);
+                console.log(e.data);
+              }
+            };
             ws.onclose   = function()  {print('[*] close');};
 
             form.submit(function() {
@@ -82,14 +102,7 @@
         var sockjs_url = '/multiplex';
         var sockjs = new SockJS(sockjs_url);
 
-        var multiplexer = new WebSocketMultiplex(sockjs);
-        var ann  = multiplexer.channel('ann');
-        var bob  = multiplexer.channel('bob');
-        var carl = multiplexer.channel('carl');
-
-        pipe(ann,  '#first');
-        pipe(bob,  '#second');
-        pipe(carl, '#third');
+        pipe(sockjs, '#main');
 
         $('#first input').focus();
     </script>

@@ -1,7 +1,9 @@
 deps/*
 ebin/*
 priv/www
+.rebar/
 *~
 .pidfile.pid
 .dialyzer_sockjs.plt
 .dialyzer_generic.plt
+/.project

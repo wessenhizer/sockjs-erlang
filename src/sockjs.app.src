@@ -1,12 +1,13 @@
 {application, sockjs,
  [
   {description, "SockJS"},
-  {vsn, "0.3.3"},
+  {vsn, "0.3.4"},
   {modules, []},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  xmerl
                  ]},
   {mod, { sockjs_app, []}}
  ]}.

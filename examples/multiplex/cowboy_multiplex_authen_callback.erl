@@ -20,7 +20,8 @@ main(_) ->
     MultiplexState = sockjs_multiplex:init_state(
                        [{"ann",  fun service_ann/3,  []},
                         {"bob",  fun service_bob/3,  []},
-                        {"carl", fun service_carl/3, []}]),
+                        {"carl", fun service_carl/3, []}],
+                       {fun authen/3, [{state, []}]}),
 
     SockjsState = sockjs_handler:init_state(
                     <<"/multiplex">>, sockjs_multiplex, MultiplexState, []),
@@ -47,7 +48,7 @@ handle(Req, State) ->
     {Path, Req1} = cowboy_req:path(Req),
     {ok, Req2} = case Path of
                      <<"/">> ->
-                         {ok, Data} = file:read_file("./examples/multiplex/index.html"),
+                         {ok, Data} = file:read_file("./examples/multiplex/index_authen_callback.html"),
                          cowboy_req:reply(200, [{<<"Content-Type">>, "text/html"}],
                                                Data, Req1);
                      _ ->
@@ -61,11 +62,28 @@ terminate(_Reason, _Req, _State) ->
 
 %% --------------------------------------------------------------------------
 
+authen(Conn, init, Extra) ->
+    {ok, TRef} = timer:apply_after(5000, sockjs, close, [Conn]),
+    {ok, [TRef | Extra]};
+authen(Conn, {recv, Data}, [TRef | Extra] = State) ->
+    case Data of
+        <<"auth">> ->
+            sockjs:send(<<"Authenticate successfully!">>, Conn),
+            timer:cancel(TRef),
+            {success, [{user_id, element(3, erlang:now())} | Extra]};
+        _Else ->
+            {ok, State}
+    end;
+authen(_Conn, closed, [TRef | Extra]) ->
+    timer:cancel(TRef),
+    {ok, Extra}.
+
 service_ann(Conn, init, State) ->
     sockjs:send("Ann says hi!", Conn),
     {ok, State};
 service_ann(Conn, {recv, Data}, State) ->
-    sockjs:send(["Ann nods: ", Data], Conn),
+    {user_id, UserId} = lists:keyfind(user_id, 1, State),
+    sockjs:send(["Ann nods: ", Data, " from ", erlang:integer_to_binary(UserId)], Conn),
     {ok, State};
 service_ann(_Conn, closed, State) ->
     {ok, State}.
@@ -74,7 +92,9 @@ service_bob(Conn, init, State) ->
     sockjs:send("Bob doesn't agree.", Conn),
     {ok, State};
 service_bob(Conn, {recv, Data}, State) ->
-    sockjs:send(["Bob says no to: ", Data], Conn),
+    {user_id, UserId} = lists:keyfind(user_id, 1, State),
+    sockjs:send(["Bob says no to: ", Data, " from ", erlang:integer_to_binary(UserId)],
+                Conn),
     {ok, State};
 service_bob(_Conn, closed, State) ->
     {ok, State}.
