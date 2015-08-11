@@ -17,9 +17,14 @@
 
 -export_type([conn/0]).
 
+-ifdef(pre17_type_specs).
+-define(QUEUE_TYPE, queue()).
+-else.
+-define(QUEUE_TYPE, queue:queue()).
+-endif.
 
 -record(session, {id                           :: session(),
-                  outbound_queue = queue:new() :: queue:queue(),
+                  outbound_queue = queue:new() :: ?QUEUE_TYPE,
                   response_pid                 :: pid(),
                   disconnect_tref              :: reference(),
                   disconnect_delay = 5000      :: non_neg_integer(),
