@@ -224,7 +224,10 @@ extract_info(Req) ->
                                   end, {[], Req2},
                                   ['referer', 'x-client-ip', 'x-forwarded-for',
                                    'x-cluster-client-ip', 'via', 'x-real-ip']),
+    %% RabbitMQ-Management needs the socket to figure out if it is SSL/TLS.
+    Socket  = cowboy_req:get(socket, element(2, Req3)),
     {[{peername, Peer},
       {sockname, Sock},
       {path, Path},
-      {headers, Headers}], Req3}.
+      {headers, Headers},
+      {socket, Socket}], Req3}.
