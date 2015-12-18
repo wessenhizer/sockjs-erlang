@@ -93,8 +93,9 @@ peername({cowboy, Req}) ->
 
 -spec sockname(req()) -> {{inet:ip_address(), non_neg_integer()}, req()}.
 sockname({cowboy, Req} = R) ->
-    {Addr, _Req} = cowboy_req:peer(Req),
-    {Addr, R}.
+    [Socket, Transport] = cowboy_req:get([socket, transport], Req),
+    {ok, SockName} = Transport:sockname(Socket),
+    {SockName, R}.
 
 %% --------------------------------------------------------------------------
 
