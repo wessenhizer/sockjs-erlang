@@ -223,7 +223,9 @@ extract_info(Req) ->
                                           end
                                   end, {[], Req2},
                                   ['referer', 'x-client-ip', 'x-forwarded-for',
-                                   'x-cluster-client-ip', 'via', 'x-real-ip']),
+                                   'x-cluster-client-ip', 'via', 'x-real-ip',
+    %% RabbitMQ-Web-STOMP needs this header for HTTP Basic Auth.
+                                   'authorization']),
     %% RabbitMQ-Management needs the socket to figure out if it is SSL/TLS.
     Socket  = cowboy_req:get(socket, element(2, Req3)),
     {[{peername, Peer},
