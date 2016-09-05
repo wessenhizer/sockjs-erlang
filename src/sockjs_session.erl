@@ -17,7 +17,7 @@
 
 -export_type([conn/0]).
 
--ifdef(pre17_type_specs).
+-ifdef(use_old_builtin_types).
 -define(QUEUE_TYPE, queue()).
 -else.
 -define(QUEUE_TYPE, queue:queue()).
