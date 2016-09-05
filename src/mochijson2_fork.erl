@@ -218,7 +218,7 @@ json_encode_proplist(Props, State) ->
 json_encode_string(A, State) when is_atom(A) ->
     B = iolist_to_binary(atom_to_list(A)),
     json_encode_string(B, State);
-json_encode_string(B, State) when is_binary(B) ->
+json_encode_string(B, _State) when is_binary(B) ->
     case json_bin_is_safe(B) of
         true ->
             <<?Q, B/binary, ?Q>>;
@@ -288,7 +288,7 @@ json_bin_is_safe(<<C, Rest/binary>>) ->
 
 %% encode utf8 string with binraies
 json_encode_string_unicode_bin(Bin) when is_binary(Bin) ->
-    Body = json_encode_string_unicode(Bin, <<"">>, <<"">>),
+    Body = json_encode_string_unicode_bin(Bin, <<"">>, <<"">>),
     <<?Q, Body/binary, ?Q>>.
 
 json_encode_string_unicode_bin(<<"">>, Acc, Buff) ->
@@ -307,7 +307,7 @@ json_encode_string_unicode_bin(<<C:8, Rest/binary>>, Acc, Buff) ->
 
         C when C >= 0, C < $\s ->
             Buff0 = json_encode_string_unicode_bin_check(Buff),
-            CEsc = unihex(C),
+            CEsc = unihex_bin(C),
             {<<Acc/binary, Buff0/binary, CEsc/binary>>,
              <<"">>};
         C when C < 2#01111111 ->
