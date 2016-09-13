@@ -216,22 +216,18 @@ json_encode_proplist(Props, State) ->
     lists:reverse([$\} | Acc1]).
 
 json_encode_string(A, State) when is_atom(A) ->
-    L = atom_to_list(A),
-    case json_string_is_safe(L) of
-        true ->
-            [?Q, L, ?Q];
-        false ->
-            json_encode_string_unicode(xmerl_ucs:from_utf8(L), State, [?Q])
-    end;
+    B = iolist_to_binary(atom_to_list(A)),
+    json_encode_string(B, State);
 json_encode_string(B, State) when is_binary(B) ->
     case json_bin_is_safe(B) of
         true ->
-            [?Q, B, ?Q];
+            <<?Q, B/binary, ?Q>>;
         false ->
-            json_encode_string_unicode(xmerl_ucs:from_utf8(B), State, [?Q])
+            json_encode_string_unicode_bin(B, State)
     end;
 json_encode_string(I, _State) when is_integer(I) ->
-    [?Q, integer_to_list(I), ?Q];
+    B = integer_to_binary(I),
+    <<?Q, B/binary, ?Q>>;
 json_encode_string(L, State) when is_list(L) ->
     case json_string_is_safe(L) of
         true ->
@@ -290,6 +286,84 @@ json_bin_is_safe(<<C, Rest/binary>>) ->
             json_bin_is_safe(Rest)
     end.
 
+%% encode utf8 string with binraies
+json_encode_string_unicode_bin(Bin, State) when is_binary(Bin) ->
+    Body = json_encode_string_unicode_bin(Bin, State, <<"">>, <<"">>),
+    <<?Q, Body/binary, ?Q>>.
+
+json_encode_string_unicode_bin(<<"">>, State, Acc, Buff) ->
+    Buff0 = json_encode_string_unicode_bin_check(Buff, State),
+    <<Acc/binary, Buff0/binary>>;
+
+json_encode_string_unicode_bin(<<C:8, Rest/binary>>, State, Acc, Buff) ->
+    {Acc1, Buff1} = case C of
+        $\" -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $");
+        $\\ -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $\\);
+        $\b -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $b);
+        $\f -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $f);
+        $\n -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $n);
+        $\r -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $r);
+        $\t -> json_encode_string_unicode_bin_simple(State, Acc, Buff, $t);
+
+        C when C >= 0, C < $\s ->
+            Buff0 = json_encode_string_unicode_bin_check(Buff, State),
+            CEsc = unihex_bin(C),
+            {<<Acc/binary, Buff0/binary, CEsc/binary>>,
+             <<"">>};
+        C when C < 2#01111111 ->
+            Buff0 = json_encode_string_unicode_bin_check(Buff, State),
+            {<<Acc/binary, Buff0/binary, C>>,
+             <<"">>};
+        C when C < 2#11000000, byte_size(Buff) >= 1 ->
+            {Acc,
+             <<Buff/binary, C>>};
+        C when C >= 2#11000000 ->
+            Buff0 = json_encode_string_unicode_bin_check(Buff, State),
+            {<<Acc/binary, Buff0/binary>>,
+             <<C>>};
+        _ -> exit({json_encode, {bad_char, [Buff]}})
+    end,
+    json_encode_string_unicode_bin(Rest, State, Acc1, Buff1).
+
+json_encode_string_unicode_bin_simple(State, Acc, Buff, Repl) ->
+    Buff0 = json_encode_string_unicode_bin_check(Buff, State),
+    {<<Acc/binary, Buff0/binary, $\\, Repl>>,
+     <<"">>}.
+
+json_encode_string_unicode_bin_check(Buff, _State) when byte_size(Buff) < 1 ->
+    Buff;
+json_encode_string_unicode_bin_check(Buff, State) ->
+    UniCode = case Buff of
+        <<P0:3/integer, D0:5/integer,
+          P1:2/integer, D1:6/integer>> when P0==2#110, P1==2#10 ->
+            D0*16#40 + D1;
+        <<P0:4/integer, D0:4/integer,
+          P1:2/integer, D1:6/integer,
+          P1:2/integer, D2:6/integer>> when P0==2#1110, P1==2#10 ->
+            D0*16#1000 + D1*16#40 + D2;
+        <<P0:5/integer, D0:3/integer,
+          P1:2/integer, D1:6/integer,
+          P1:2/integer, D2:6/integer,
+          P1:2/integer, D3:6/integer>> when P0==2#11110, P1==2#10 ->
+            D0*16#040000 + D1*16#1000 + D2*16#40 + D3;
+        _ -> exit({json_encode, {bad_unicode_char, [Buff]}})
+    end,
+    case State#encoder.utf8 of
+        false -> unihex_bin(UniCode);
+        true  -> Buff
+    end.
+
+
+unihex_bin(C) when C < 16#10000 ->
+    Digits = << <<begin hexdigit(D) end>> || <<D:4>> <= <<C:16>> >>,
+    <<$\\, $u, Digits/binary>>;
+unihex_bin(C) when C =< 16#10FFFF ->
+    N = C - 16#10000,
+    S1 = unihex_bin(16#d800 bor ((N bsr 10) band 16#3ff)),
+    S2 = unihex_bin(16#dc00 bor (N band 16#3ff)),
+    <<S1/binary, S2/binary>>.
+
+%
 json_encode_string_unicode([], _State, Acc) ->
     lists:reverse([$\" | Acc]);
 json_encode_string_unicode([C | Cs], State, Acc) ->
@@ -729,13 +803,13 @@ e2j_test_vec(utf8) ->
 %% test utf8 encoding
 encoder_utf8_test() ->
     %% safe conversion case (default)
-    [34,"\\u0001","\\u0442","\\u0435","\\u0441","\\u0442",34] =
-        encode(<<1,"\321\202\320\265\321\201\321\202">>),
+    Ans1 = iolist_to_binary([34,"\\u0001","\\u0442","\\u0435","\\u0441","\\u0442",34]),
+    Ans1 = encode(<<1,"\321\202\320\265\321\201\321\202">>),
 
     %% raw utf8 output (optional)
-    Enc = mochijson2:encoder([{utf8, true}]),
-    [34,"\\u0001",[209,130],[208,181],[209,129],[209,130],34] =
-        Enc(<<1,"\321\202\320\265\321\201\321\202">>).
+    Enc = mochijson2_fork:encoder([{utf8, true}]),
+    Ans2 = iolist_to_binary([34,"\\u0001",[209,130],[208,181],[209,129],[209,130],34]),
+    Ans2 = Enc(<<1,"\321\202\320\265\321\201\321\202">>).
 
 input_validation_test() ->
     Good = [
