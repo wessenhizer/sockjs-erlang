@@ -105,7 +105,7 @@ action(Conn, {Type, Topic, Payload}, Service, Channels, Extra) ->
             orddict:store(Topic, emit(init, Channel), Channels);
         {"uns", true} ->
             Channel = orddict:fetch(Topic, Channels),
-            emit(closed, Channel),
+            _ = emit(closed, Channel),
             orddict:erase(Topic, Channels);
         {"msg", true} ->
             Channel = orddict:fetch(Topic, Channels),
@@ -129,9 +129,7 @@ emit(What, Channel = #service{callback = Callback,
 
 split(Char, Str, Limit) when Limit > 0 ->
     Acc = split(Char, Str, Limit, []),
-    lists:reverse(Acc);
-split(_Char, Str, 0) ->
-    [Str].
+    lists:reverse(Acc).
 
 split(_Char, Str, 1, Acc) ->
     [Str | Acc];

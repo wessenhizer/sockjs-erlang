@@ -25,13 +25,13 @@
 
 -record(session, {id                           :: session(),
                   outbound_queue = queue:new() :: ?QUEUE_TYPE,
-                  response_pid                 :: pid(),
-                  disconnect_tref              :: reference(),
+                  response_pid                 :: pid() | undefined,
+                  disconnect_tref              :: reference() | undefined,
                   disconnect_delay = 5000      :: non_neg_integer(),
-                  heartbeat_tref               :: reference() | triggered,
+                  heartbeat_tref               :: reference() | triggered | undefined,
                   heartbeat_delay = 25000      :: non_neg_integer(),
                   ready_state = connecting     :: connecting | open | closed,
-                  close_msg                    :: {non_neg_integer(), string()},
+                  close_msg                    :: {non_neg_integer(), string()} | undefined,
                   callback,
                   state,
                   handle                       :: handle()

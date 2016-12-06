@@ -23,14 +23,7 @@ method_atom(<<"POST">>) -> 'POST';
 method_atom(<<"DELETE">>) -> 'DELETE';
 method_atom(<<"OPTIONS">>) -> 'OPTIONS';
 method_atom(<<"PATCH">>) -> 'PATCH';
-method_atom(<<"HEAD">>) -> 'HEAD';
-method_atom('GET') -> 'GET';
-method_atom('PUT') -> 'PUT';
-method_atom('POST') -> 'POST';
-method_atom('DELETE') -> 'DELETE';
-method_atom('OPTIONS') -> 'OPTIONS';
-method_atom('PATCH') -> 'PATCH';
-method_atom('HEAD') -> 'HEAD'.
+method_atom(<<"HEAD">>) -> 'HEAD'.
 
 -spec body(req()) -> {binary(), req()}.
 body({cowboy, Req})       -> {ok, Body, Req1} = cowboy_req:body(Req),
@@ -56,16 +49,11 @@ body_qs2({cowboy, Req}) ->
     end.
 
 -spec header(atom(), req()) -> {nonempty_string() | undefined, req()}.
-header(K, {cowboy, Req})->
-    {H, Req2} = cowboy_req:header(K, Req),
-    {V, Req3} = case H of
-                    undefined ->
-                        cowboy_req:header(atom_to_binary(K, utf8), Req2);
-                    _ -> {H, Req2}
-                end,
+header(K, {cowboy, Req0})->
+    {V, Req} = cowboy_req:header(atom_to_binary(K, latin1), Req0),
     case V of
-        undefined -> {undefined, {cowboy, Req3}};
-        _         -> {binary_to_list(V), {cowboy, Req3}}
+        undefined -> {undefined, {cowboy, Req}};
+        _         -> {binary_to_list(V), {cowboy, Req}}
     end.
 
 -spec jsessionid(req()) -> {nonempty_string() | undefined, req()}.

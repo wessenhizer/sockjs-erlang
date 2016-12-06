@@ -33,16 +33,15 @@ terminate(_Reason, _Req, _Service) ->
 websocket_init(_TransportName, Req,
                Service = #service{logger        = Logger,
                                   subproto_pref = SubProtocolPref}) ->
-    Req3 = case cowboy_req:header(<<"Sec-Websocket-Protocol">>, Req) of
+    Req3 = case cowboy_req:header(<<"sec-websocket-protocol">>, Req) of
                {undefined, Req1} ->
                    Req1;
                {SubProtocols, Req1} ->
                    SelectedSubProtocol =
                      choose_subprotocol_bin(SubProtocols, SubProtocolPref),
-                   {ok, Req2} = cowboy_req:set_resp_header(
-                                  <<"Sec-Websocket-Protocol">>,
-                                  SelectedSubProtocol, Req1),
-                   Req2
+                   cowboy_req:set_resp_header(
+                     <<"sec-websocket-protocol">>,
+                     SelectedSubProtocol, Req1)
            end,
 
     Req4 = Logger(Service, {cowboy, Req3}, websocket),
