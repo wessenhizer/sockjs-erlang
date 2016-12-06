@@ -12,7 +12,7 @@
 rand32() ->
     case get(random_seeded) of
         undefined ->
-            {MegaSecs, Secs, MicroSecs} = now(),
+            {MegaSecs, Secs, MicroSecs} = os:timestamp(),
             _ = random:seed(MegaSecs, Secs, MicroSecs),
             put(random_seeded, true);
         _Else ->
