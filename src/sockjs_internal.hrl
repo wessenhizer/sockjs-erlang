@@ -1,5 +1,5 @@
 
--type(req()          :: {cowboy, any()}).
+-type(req()          :: {cowboy, cowboy_req:req()}).
 
 -type(user_session() :: nonempty_string()).
 -type(emittable()    :: init|closed|{recv, binary()}).

@@ -9,12 +9,12 @@
 %% --------------------------------------------------------------------------
 
 -spec path(req()) -> {string(), req()}.
-path({cowboy, Req})       -> {Path, Req1} = cowboy_req:path(Req),
-                             {binary_to_list(Path), {cowboy, Req1}}.
+path({cowboy, Req} = R)   -> Path = cowboy_req:path(Req),
+                             {binary_to_list(Path), R}.
 
 -spec method(req()) -> {atom(), req()}.
-method({cowboy, Req})       -> {Method, Req1} = cowboy_req:method(Req),
-                               {method_atom(Method), {cowboy, Req1}}.
+method({cowboy, Req} = R) -> Method = cowboy_req:method(Req),
+                             {method_atom(Method), R}.
 
 -spec method_atom(binary() | atom()) -> atom().
 method_atom(<<"GET">>) -> 'GET';
@@ -49,8 +49,8 @@ body_qs2({cowboy, Req}) ->
     end.
 
 -spec header(atom(), req()) -> {nonempty_string() | undefined, req()}.
-header(K, {cowboy, Req0})->
-    {V, Req} = cowboy_req:header(atom_to_binary(K, latin1), Req0),
+header(K, {cowboy, Req})->
+    V = cowboy_req:header(atom_to_binary(K, latin1), Req),
     case V of
         undefined -> {undefined, {cowboy, Req}};
         _         -> {binary_to_list(V), {cowboy, Req}}
